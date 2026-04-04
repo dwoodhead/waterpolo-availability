@@ -1,13 +1,14 @@
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
-import { sessions } from '@/lib/sessions'
+import { sessions, isExpired } from '@/lib/sessions'
 import type { Rsvp } from '@/lib/types'
 import SessionCard from '@/components/session-card'
 
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  const sessionIds = sessions.map((s) => s.id)
+  const activeSessions = sessions.filter((s) => !isExpired(s))
+  const sessionIds = activeSessions.map((s) => s.id)
 
   const { data: rsvps } = await supabase
     .from('rsvps')
@@ -39,7 +40,7 @@ export default async function HomePage() {
       </header>
 
       <div className="flex flex-col gap-5">
-        {sessions.map((session) => (
+        {activeSessions.map((session) => (
           <SessionCard
             key={session.id}
             session={session}

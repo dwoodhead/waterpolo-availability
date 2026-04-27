@@ -8,14 +8,10 @@ export type Session = {
   fieldTarget: number
 }
 
-// Returns true if the session ended more than 3 hours ago
+// Returns true if the session's date has passed midnight Pacific time
 export function isExpired(session: Session): boolean {
-  const [timePart, meridiem] = session.time.split(' ')
-  let [hours, minutes] = timePart.split(':').map(Number)
-  if (meridiem === 'PM' && hours !== 12) hours += 12
-  if (meridiem === 'AM' && hours === 12) hours = 0
-  const sessionStart = new Date(`${session.date}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`)
-  return Date.now() > sessionStart.getTime() + 3 * 60 * 60 * 1000
+  const todayPacific = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
+  return session.date < todayPacific
 }
 
 // Edit this array to add, remove, or change training sessions.
@@ -84,15 +80,6 @@ export const sessions: Session[] = [
     fieldTarget: 13,
   },
   {
-    id: 'stanford-scrimmage-2026-04-14',
-    label: 'Stanford Scrimmage TBD — Tuesday, Apr 14',
-    date: '2026-04-14',
-    time: '6:00 PM',
-    location: 'Avery Aquatic Center',
-    goalieTarget: 1,
-    fieldTarget: 7,
-  },
-  {
     id: 'practice-2026-04-15',
     label: 'Practice — Wednesday, Apr 15',
     date: '2026-04-15',
@@ -147,13 +134,13 @@ export const sessions: Session[] = [
     fieldTarget: 13,
   },
   {
-    id: 'stanford-scrimmage-2026-04-28',
-    label: 'Stanford Scrimmage TBD — Tuesday, Apr 28',
+    id: 'shootaround-2026-04-28',
+    label: 'Shootaround — Tuesday, Apr 28',
     date: '2026-04-28',
-    time: '6:00 PM',
-    location: 'Avery Aquatic Center',
+    time: '7:00 PM',
+    location: 'City Clubhouse',
     goalieTarget: 1,
-    fieldTarget: 7,
+    fieldTarget: 3,
   },
   {
     id: 'practice-2026-04-29',
@@ -163,5 +150,14 @@ export const sessions: Session[] = [
     location: 'City Clubhouse',
     goalieTarget: 2,
     fieldTarget: 13,
+  },
+  {
+    id: 'shootaround-2026-04-30',
+    label: 'Shootaround — Thursday, Apr 30',
+    date: '2026-04-30',
+    time: '7:00 PM',
+    location: 'City Clubhouse',
+    goalieTarget: 1,
+    fieldTarget: 3,
   },
 ]

@@ -6,6 +6,7 @@ water polo games on that date (Pacific time) and emails the family from dwoodhea
 - Matches events whose title starts with `WPL:` (Greek league) or `CL:` (Champions League) and contains "Panathinaikos". `EL:` (EuroLeague basketball) is ignored.
 - Game time = calendar start + 45 min (the calendar holds a 45-minute buffer), shown in Pacific time.
 - Watch links: WPL → KOE TV on YouTube (Live tab), CL → European Aquatics TV.
+- Each email has an "Add to Google Calendar" link and a `game.ics` attachment for Apple Calendar or Outlook.
 - Recipients go in Bcc. `sent-state.json` prevents duplicate sends.
 
 ## Setup on the Mac mini

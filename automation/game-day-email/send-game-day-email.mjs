@@ -57,6 +57,8 @@ export function parseGame(event, offsetMin = DEFAULT_GAME_OFFSET_MIN) {
     sides.find((s) => !s.toLowerCase().includes(TEAM.toLowerCase())) || matchup;
 
   const gameTime = new Date(new Date(event.start.dateTime).getTime() + offsetMin * 60_000);
+  const calEnd = event.end?.dateTime ? new Date(event.end.dateTime) : null;
+  const gameEnd = calEnd && calEnd > gameTime ? calEnd : new Date(gameTime.getTime() + 90 * 60_000);
 
   return {
     id: event.id,
@@ -66,7 +68,70 @@ export function parseGame(event, offsetMin = DEFAULT_GAME_OFFSET_MIN) {
     homeAway,
     location: event.location || "",
     gameTime,
+    gameEnd,
   };
+}
+
+// UTC basic format used by Google Calendar links and iCalendar: 20261014T183000Z
+function utcStamp(date) {
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+
+function eventTitle(game) {
+  return `🤽 Panathinaikos vs ${game.opponent}`;
+}
+
+function eventDetails(game) {
+  return `${game.competition.name}\n${game.competition.watchLabel}: ${game.competition.watchUrl}`;
+}
+
+export function googleCalendarLink(game) {
+  return "https://calendar.google.com/calendar/render?" + new URLSearchParams({
+    action: "TEMPLATE",
+    text: eventTitle(game),
+    dates: `${utcStamp(game.gameTime)}/${utcStamp(game.gameEnd)}`,
+    details: eventDetails(game),
+    location: game.location,
+  });
+}
+
+function icsEscape(text) {
+  return text.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/([,;])/g, "\\$1");
+}
+
+// .ics attachment for Apple Calendar / Outlook users
+export function buildIcs(game) {
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//waterpolo-availability//game-day-email//EN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${game.id}@game-day-email`,
+    `DTSTAMP:${utcStamp(new Date())}`,
+    `DTSTART:${utcStamp(game.gameTime)}`,
+    `DTEND:${utcStamp(game.gameEnd)}`,
+    `SUMMARY:${icsEscape(eventTitle(game))}`,
+    `DESCRIPTION:${icsEscape(eventDetails(game))}`,
+    `LOCATION:${icsEscape(game.location)}`,
+    `URL:${game.competition.watchUrl}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+    "",
+  ].map(foldIcsLine).join("\r\n");
+}
+
+// RFC 5545: lines longer than 75 octets continue on the next line with a leading space
+function foldIcsLine(line) {
+  const chars = [...line];
+  const out = [];
+  let cur = "";
+  for (const ch of chars) {
+    if (Buffer.byteLength(cur + ch) > (out.length ? 74 : 75)) { out.push(cur); cur = ""; }
+    cur += ch;
+  }
+  out.push(cur);
+  return out.join("\r\n ");
 }
 
 export function pacificDate(date) {
@@ -99,8 +164,13 @@ export function buildEmail(game) {
     `Competition: ${game.competition.name}`,
   ];
   if (game.homeAway) lines.push(`Venue:       ${game.homeAway}${game.location ? ` (${game.location})` : ""}`);
-  lines.push("", `${game.competition.watchLabel}:`, game.competition.watchUrl, "", "Go PAO! 💚");
-  return { subject, body: lines.join("\n") };
+  lines.push(
+    "", `${game.competition.watchLabel}:`, game.competition.watchUrl,
+    "", "Add to Google Calendar:", googleCalendarLink(game),
+    "(Apple/Outlook: open the attached game.ics)",
+    "", "Go PAO! 💚",
+  );
+  return { subject, body: lines.join("\n"), ics: buildIcs(game) };
 }
 
 // ---------- Google APIs ----------
@@ -142,18 +212,34 @@ function encodeHeader(text) {
   return /[^\x20-\x7e]/.test(text) ? `=?UTF-8?B?${Buffer.from(text).toString("base64")}?=` : text;
 }
 
-async function sendEmail(token, { from, to, subject, body }) {
-  const mime = [
+export function buildMime({ from, to, subject, body, ics }) {
+  const boundary = `gameday-${Date.now().toString(36)}`;
+  return [
     `From: ${from}`,
     `To: ${from}`,
     `Bcc: ${to.join(", ")}`,
     `Subject: ${encodeHeader(subject)}`,
     "MIME-Version: 1.0",
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
     'Content-Type: text/plain; charset="UTF-8"',
     "Content-Transfer-Encoding: base64",
     "",
     Buffer.from(body).toString("base64"),
+    `--${boundary}`,
+    'Content-Type: text/calendar; charset="UTF-8"; method=PUBLISH; name="game.ics"',
+    'Content-Disposition: attachment; filename="game.ics"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    Buffer.from(ics).toString("base64"),
+    `--${boundary}--`,
+    "",
   ].join("\r\n");
+}
+
+async function sendEmail(token, email) {
+  const mime = buildMime(email);
   const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

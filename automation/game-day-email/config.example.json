@@ -1,0 +1,9 @@
+{
+  "from": "dwoodhead3@gmail.com",
+  "recipients": ["family1@example.com", "family2@example.com"],
+  "calendarId": "primary",
+  "gameStartOffsetMinutes": 45,
+  "clientId": "YOUR_CLIENT_ID.apps.googleusercontent.com",
+  "clientSecret": "YOUR_CLIENT_SECRET",
+  "refreshToken": "FROM_get-refresh-token.mjs"
+}

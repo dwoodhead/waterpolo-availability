@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Runs daily at 07:00 Mac local time. Replace __REPO__ and __NODE__ (output of `which node`). -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.dwoodhead.gameday-email</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__NODE__</string>
+    <string>__REPO__/automation/game-day-email/send-game-day-email.mjs</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>7</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/tmp/gameday-email.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/gameday-email.log</string>
+</dict>
+</plist>

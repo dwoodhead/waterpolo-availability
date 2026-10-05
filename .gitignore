@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# game-day email automation secrets/state
+/automation/game-day-email/config.json
+/automation/game-day-email/sent-state.json
